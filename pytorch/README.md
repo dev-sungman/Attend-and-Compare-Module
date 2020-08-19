@@ -1,3 +1,5 @@
-# TODOS
+# TO-DO
+
 - [ ] make orthgonal loss
-- [ ] write cifar 100 train, test code
+- [X] write cifar 100 train, test code
+- [ ] experiments (resnet50 vs resnet50 w/ ACM)
