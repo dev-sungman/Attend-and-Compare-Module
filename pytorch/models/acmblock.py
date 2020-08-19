@@ -62,7 +62,7 @@ class ACMBlock(nn.Module):
         channel_weights = self.global_pooling(mean_features)
 
         return channel_weights * (x+(K-Q))
-
+    
 
 ### Test
 if __name__ == '__main__':

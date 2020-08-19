@@ -1,1 +1,10 @@
 *.swp
+*.txt
+
+*.pyc
+
+pytorch/runs/
+pytorch/checkpoints/
+pytorch/__pycache__/
+pytorch/data/
+
