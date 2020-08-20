@@ -9,8 +9,6 @@ class ACMBlock(nn.Module):
         self.in_channels = in_channels
         self.out_channels = in_channels
         self.groups = groups
-
-    
         self.k_conv = nn.Sequential(
             nn.Conv2d(self.in_channels, self.out_channels, (1,1), groups=self.groups),
             nn.Softmax(dim=1)
@@ -29,19 +27,19 @@ class ACMBlock(nn.Module):
         )
 
         self.avgpool = nn.AdaptiveAvgPool2d((1,1))
+        self.orth_loss = None
 
     def _get_normalized_features(self, x):
-        '''
-        Get mean vector by channel axis
-        Args:
-            input : tensor [B, C, H, W]
+        ''' Get mean vector by channel axis '''
         
-        Return:
-            mean tensor [B, C, 1, 1]
-        '''
-
         c_mean = self.avgpool(x)
         return c_mean
+    
+
+    def get_orth_loss(self):
+        '''Get orthogonal loss'''
+        print(self.orth_loss)
+        return self.orth_loss
 
 
     def forward(self, x):
@@ -60,6 +58,9 @@ class ACMBlock(nn.Module):
         
         # global information
         channel_weights = self.global_pooling(mean_features)
+
+        # orthogonal loss
+        self.orth_loss = torch.matmul(K, Q) / self.in_channels
 
         return channel_weights * (x+(K-Q))
     
