@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 import numpy as np
 from tensorboardX import SummaryWriter
+import random
 
 import torch
 import torch.nn as nn
@@ -14,7 +15,7 @@ import torchvision.transforms as T
 
 from config import parse_arguments
 from models.resnet import resnet50
-
+from models.acm_resnet import acm_resnet50
 
 
 def train(args, train_loader, test_loader, net, device, writer, log_dir, checkpoint_dir):
@@ -33,6 +34,11 @@ def train(args, train_loader, test_loader, net, device, writer, log_dir, checkpo
             labels = labels.to(device)
 
             outputs = net(imgs)
+            
+            print(net.module.layer1[0].acm.get_orth_loss)
+            raise
+
+            
 
             criterion = nn.CrossEntropyLoss()
             loss = criterion(outputs, labels)
@@ -89,10 +95,10 @@ def main(args):
     num_gpus = torch.cuda.device_count()
     print('[*] GPU {} is detected.'.format(args.gpu_idx))
 
-    random.seed(777)
-    torch.manual_seed(777)
+    random.seed(args.random_seed)
+    torch.manual_seed(args.random_seed)
     if device == 'cuda':
-        torch.cuda.manual_seed_all(777)
+        torch.cuda.manual_seed_all(args.random_seed)
         
 
     ### Path setting
@@ -134,7 +140,11 @@ def main(args):
     test_loader = torch.utils.data.DataLoader(test_datasets, batch_size=args.batch_size, num_workers=args.workers, pin_memory=True, shuffle=True)
 
     print('[*] build network...')
-    net = resnet50(num_classes=100)
+    if args.use_acm is False:
+        net = resnet50(num_classes=100)
+    else:
+        net = acm_resnet50(num_classes=100)
+
     if num_gpus > 1 and device == 'cuda':
         net = nn.DataParallel(net)
     net = net.to(device)
