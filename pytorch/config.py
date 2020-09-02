@@ -12,6 +12,8 @@ def parse_arguments(argv):
     parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--use_acm', type=bool, default=False)
+    parser.add_argument('--random_seed', type=int, default=777)
     
     # hardware setting
     parser.add_argument('--gpu_idx', type=str, default='0,1')
