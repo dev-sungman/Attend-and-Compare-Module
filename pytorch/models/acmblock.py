@@ -9,15 +9,9 @@ class ACMBlock(nn.Module):
         self.in_channels = in_channels
         self.out_channels = in_channels
         self.groups = groups
-        self.k_conv = nn.Sequential(
-            nn.Conv2d(self.in_channels, self.out_channels, (1,1), groups=self.groups),
-            nn.Softmax(dim=1)
-        )
+        self.k_conv = nn.Conv2d(self.in_channels, self.out_channels, (1,1), groups=self.groups),
 
-        self.q_conv = nn.Sequential(
-            nn.Conv2d(self.in_channels, self.out_channels, (1,1), groups=self.groups),
-            nn.Softmax(dim=1)
-        )
+        self.q_conv = nn.Conv2d(self.in_channels, self.out_channels, (1,1), groups=self.groups),
 
         self.global_pooling = nn.Sequential(
             nn.Conv2d(self.in_channels, self.out_channels//2, (1,1), groups=self.groups),
@@ -27,6 +21,8 @@ class ACMBlock(nn.Module):
         )
 
         self.avgpool = nn.AdaptiveAvgPool2d((1,1))
+        self.normalize = nn.Softmax(dim=3)
+
         self.orth_loss = None
 
     def _get_normalized_features(self, x):
@@ -49,7 +45,14 @@ class ACMBlock(nn.Module):
         
         # get features
         K = self.k_conv(x)
+        b, c, h, w = K.shape
+        K = K.view(b, c, 1, h*w)
+        K = self.normalize(K)
+
         Q = self.q_conv(x)
+        b, c, h, w = Q.shape
+        Q = Q.view(b, c, 1, h*w)
+        Q = self.normalize(Q)
         
         K = torch.einsum('nchw,nchw->nc',[K, x]).unsqueeze(-1).unsqueeze(-1)
         Q = torch.einsum('nchw,nchw->nc',[Q, x]).unsqueeze(-1).unsqueeze(-1)
