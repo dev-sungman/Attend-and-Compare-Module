@@ -23,20 +23,17 @@ class ACMBlock(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1,1))
         self.normalize = nn.Softmax(dim=3)
 
-        self.orth_loss = None
-
     def _get_normalized_features(self, x):
         ''' Get mean vector by channel axis '''
         
         c_mean = self.avgpool(x)
         return c_mean
-    
 
-    def get_orth_loss(self):
-        '''Get orthogonal loss'''
-        print(self.orth_loss)
-        return self.orth_loss
-
+    def _get_orth_loss(self, K, Q):
+        cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+        orth_loss = cos(K, Q)
+        orth_loss = torch.mean(orth_loss, dim=0)
+        return orth_loss
 
     def forward(self, x):
         # get normalized features
@@ -44,28 +41,28 @@ class ACMBlock(nn.Module):
         normalized_features = x - mean_features
         
         # get features
-        K = self.k_conv(x)
+        K = self.k_conv(normalized_features)
         b, c, h, w = K.shape
         K = K.view(b, c, 1, h*w)
         K = self.normalize(K)
 
-        Q = self.q_conv(x)
+        Q = self.q_conv(normalized_features)
         b, c, h, w = Q.shape
         Q = Q.view(b, c, 1, h*w)
         Q = self.normalize(Q)
         
-        K = torch.einsum('nchw,nchw->nc',[K, x]).unsqueeze(-1).unsqueeze(-1)
-        Q = torch.einsum('nchw,nchw->nc',[Q, x]).unsqueeze(-1).unsqueeze(-1)
-        
-        diff = K-Q
+        K = torch.einsum('bchw,bchw->nc',[K, x]).unsqueeze(-1).unsqueeze(-1)
+        Q = torch.einsum('bchw,bchw->nc',[Q, x]).unsqueeze(-1).unsqueeze(-1)
         
         # global information
         channel_weights = self.global_pooling(mean_features)
 
-        # orthogonal loss
-        self.orth_loss = torch.matmul(K, Q) / self.in_channels
+        out = channel_weights*(x + (K-Q))
 
-        return channel_weights * (x+(K-Q))
+        # orthogonal loss
+        orth_loss = self._get_orth_loss(K, Q)
+
+        return out, orth_loss
     
 
 ### Test

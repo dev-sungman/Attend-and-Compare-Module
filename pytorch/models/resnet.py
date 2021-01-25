@@ -4,6 +4,10 @@ import torch.nn.functional as F
 from models.utils import load_state_dict_from_url
 import time
 
+##### ACM import
+from models.acmblock import ACMBlock
+
+
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
            'wide_resnet50_2', 'wide_resnet101_2']
@@ -163,6 +167,12 @@ class ResNet(nn.Module):
                                        dilate=replace_stride_with_dilation[2])
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
+        
+        ##### ACM Examples
+        self.acm1 =self.ACMBlock(in_channels=64*block.expansion)
+        self.acm2 = self.ACMBlock(in_channels=128*block.expansion)
+        self.acm3 = self.ACMBlock(in_channels=256*block.expansion)
+        self.acm4 = self.ACMBlock(in_channels=512*block.expansion)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -213,15 +223,24 @@ class ResNet(nn.Module):
         x = self.maxpool(x)
 
         x = self.layer1(x)
+        x, orth1 = self.acm1(x)
+
         x = self.layer2(x)
+        x, orth2 = self.acm2(x)
+
         x = self.layer3(x)
+        x, orth3 = self.acm3(x)
+
         x = self.layer4(x)
+        x, orth4 = self.acm4(x)
 
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.fc(x)
+        
+        orth = orth1 + orth2 + orth3 + orth4 / 4
 
-        return x
+        return x, orth
 
     def forward(self, x):
         return self._forward_impl(x)
